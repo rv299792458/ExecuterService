@@ -1,0 +1,108 @@
+public class ThreadPoolExecuterServicee {
+    private class Work {
+        public final boolean terminateThread;
+        public final Runnable runnable;
+
+        public final String name;
+
+        public Work(boolean terminateThread, Runnable runnable, String name) {
+            this.terminateThread = terminateThread;
+            this.runnable = runnable;
+            this.name = name;
+        }
+    }
+
+    private class Worker extends Thread {
+        private BlockingQueue<Work> workQueue;
+        private AtomicInteger runningCount;
+        public Worker(BlockingQueue<Work> workQueue, AtomicInteger runningCount) {
+            this.workQueue = workQueue;
+            this.runningCount = runningCount;
+        }
+
+        public void run() {
+            while (true) {
+                Work work = workQueue.poll();
+                if (work == null) {
+                    try {Thread.sleep(100);} catch (Exception e) {}
+                    continue;
+                }
+                if (work.terminateThread) break;
+
+                runningCount.incrementAndGet();
+                work.runnable.run();
+                runningCount.decrementAndGet();
+            }
+        }
+    }
+
+    private final int corePoolSize;
+    private final int maxPoolSize;
+    private final BlockingQueue<Work> workQueue;
+    private final AtomicInteger runningThread;
+    private final List<Worker> threadPool;
+
+    public ThreadPoolExecuterServicee(int corePoolSize, int maxPoolSize, BlockingQueue<Work> workQueue) {
+        assert maxPoolSize >= corePoolSize;
+
+        this.corePoolSize = corePoolSize;
+        this.maxPoolSize = maxPoolSize;
+        this.workQueue = workQueue;
+        this.runningThread = new AtomicInteger();
+        this.threadPool = new ArrayList<>();
+    }
+
+    public void submit(Runnable task, String name){
+        workQueue.add(new Work(false, task, name));
+
+        if (runningThread.get() < corePoolSize) {
+            threadPool.add(new Worker(workQueue, runningThread));
+            return;
+        }
+
+        if (runningThread.get() >= corePoolSize && runningThread.get() < maxPoolSize) {
+            return;
+        }
+
+        if (runningThread.get() > maxPoolSize) {
+
+            return;
+        }
+
+
+        // Add task to queue incase all tasks are running create new threads
+
+       /*synchronized (currentSize){
+           if(currentSize.get() < corePoolSize){
+               Thread t = new Thread(task);
+               t.setName(name);
+               System.out.println(name+"is running");
+               currentSize.incrementAndGet();
+               t.start();
+               while(true){
+                   if(t.isAlive())
+                   {
+                       currentSize.decrementAndGet();
+                       break;
+                   }
+
+               }
+           }
+           else if(currentSize.get()<maxPoolSize){
+               System.out.println(name+" task is Added to Queue");
+               workQueue.add(new Work(task, name));
+               currentSize.incrementAndGet();
+           }else {
+               Work polledTask = workQueue.poll();
+               if(polledTask!=null )
+               {
+                   Thread t = new Thread(task);
+                   t.setName(name);
+                   System.out.println(name+"is running");
+                   task.run();
+                   currentSize.decrementAndGet();
+               }
+           }
+       }*/
+    }
+}
